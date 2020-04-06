@@ -3,24 +3,24 @@
 #include <stack>
 #include <algorithm>
 
+enum Colors {WHITE, GRAY, BLACK};
+
 class Graph {
 public:
-    Graph(int VortexCount) {
-        nextdoors.resize(VortexCount);
-        VortexNum = VortexCount;
+    explicit Graph(int VertexCount) {
+        nextdoors.resize(VertexCount);
     }
 
-    void AddVortex() {
-        std::vector<int> NewVortex(0);
-        nextdoors.push_back(NewVortex);
-        VortexNum++;
+    void AddVertex() {
+        std::vector<int> NewVertex(0);
+        nextdoors.push_back(NewVertex);
     }
 
     void AddEdge(int from, int to) {
         nextdoors[from].push_back(to);
     }
 
-    bool HasEdge(int from, int to) {
+    bool HasEdge(int from, int to) const {
         for (int i = 0; i < nextdoors[from - 1].size(); i++) {
             if (nextdoors[from - 1][i] == to - 1) {
                 return true;
@@ -34,7 +34,7 @@ public:
     }
 
     int VertexCount() const {
-        return VortexNum;
+        return nextdoors.size();
     }
 
     void sortedges() {
@@ -43,48 +43,53 @@ public:
         }
     }
 
-    void Print() const {
+    std::ostream& operator<<(std::ostream& out) const {
         for (int i = 0; i < nextdoors.size(); i++) {
             for (int j = 0; j < nextdoors[i].size(); j++){
-                std::cout << nextdoors[i][j] << " ";
+                out << nextdoors[i][j] << " ";
             }
         }
-        std::cout << "\n";
+        out << "\n";
+        return out;
     }
 private:
     std::vector<std::vector<int>> nextdoors;
-    int VortexNum;
 };
 
-int TopSort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertices, int InRes, int top) {
+int TopSort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertices, int& InRes, int top) {
     std::stack<int> s;
     s.push(top);
     while (!s.empty()){
         int vertex = s.top();
-        while (!s.empty() and used[vertex] == 2) {
+        while (!s.empty() and used[vertex] == Colors(BLACK)) {
             s.pop();
             vertex = s.top();
         }
-        used[vertex] = 1;
+        used[vertex] = Colors(GRAY);
         std::vector<int> next = graph.GetNextVertexes(vertex);
-        int p = 0;
+        bool add_in_stack = false;
         for (int i = next.size() - 1; i >= 0; i--) {
-            if (used[next[i]] == 1) {
+            if (used[next[i]] == Colors(GRAY)) {
                 return 0;
             }
-            else if (!used[next[i]]) {
+            else if (used[next[i]] == Colors(WHITE)) {
                 s.push(next[i]);
-                p = 1;
+                add_in_stack = true;
             }
         }
-        if (!p) {
-            used[vertex] = 2;
+        if (!add_in_stack) {
+            used[vertex] = Colors(BLACK);
             s.pop();
             vertices[vertices.size() - 1 - InRes] = vertex;
             InRes++;
         }
     }
-    return InRes;
+    if (InRes){
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 int main() {
@@ -101,17 +106,17 @@ int main() {
     graph.sortedges();
     std::vector<int> vertices (n, 0);
     std::vector<int> used (n, 0);
-    int InRes = 0, AddInRes = 0;
+    int InRes = 0;
+    bool Is_Sorted;
     for (int i = 0; i < n; i++) {
         if (sources[i] == 1) {
-            AddInRes = TopSort(graph, used, vertices, InRes, i);
-            if (!AddInRes) {
+            Is_Sorted = TopSort(graph, used, vertices, InRes, i);
+            if (!Is_Sorted) {
                 break;
             }
-            InRes = AddInRes;
         }
     }
-    if (!AddInRes) {
+    if (!Is_Sorted) {
         std::cout << "NO";
     }
     else{
