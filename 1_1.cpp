@@ -5,16 +5,13 @@
 
 class Graph {
 public:
-    Graph(int VortexCount) {
-        nextdoors.resize(VortexCount);
-        H.resize(VortexCount);
-        VortexNum = VortexCount;
+    Graph(int VertexCount) {
+        nextdoors.resize(VertexCount);
     }
 
-    void AddVortex() {
-        std::vector<int> NewVortex(0);
-        nextdoors.push_back(NewVortex);
-        VortexNum++;
+    void AddVertex() {
+        std::vector<int> NewVertex(0);
+        nextdoors.push_back(NewVertex);
     }
 
     void AddEdge(int from, int to) {
@@ -36,21 +33,7 @@ public:
     }
 
     int VertexCount() const {
-        return VortexNum;
-    }
-
-    void ChangeH(int vertex, int h){
-        H[vertex] = h;
-    }
-
-    int GetH(int vertex) const{
-        return H[vertex];
-    }
-
-    void ZeroH() {
-        for (int i = 0; i < H.size(); i++) {
-            H[i] = 0;
-        }
+        return nextdoors.size();
     }
 
     void Print() const {
@@ -63,11 +46,9 @@ public:
     }
 private:
     std::vector<std::vector<int>> nextdoors;
-    std::vector<int> H;
-    int VortexNum;
 };
 
-void BFS(Graph& graph, int from, void (*visit)(Graph&, std::pair<int, int>)){// для одной компоненты связности [O(V + E) for List; O(V**2) for Matrix]
+void BFS(Graph& graph, std::vector<int>& H, int from, void (*visit)(std::vector<int>&, std::pair<int, int>)){// для одной компоненты связности [O(V + E) for List; O(V**2) for Matrix]
     std::queue<std::pair<int, int>> qu;
     std::vector<bool> color (graph.VertexCount(), false);
     qu.push(std::pair<int, int>(from, 0));
@@ -84,18 +65,49 @@ void BFS(Graph& graph, int from, void (*visit)(Graph&, std::pair<int, int>)){// 
                 color[next[i]] = true;
             }
         }
-        visit(graph, vertex);
+        visit(H, vertex);
     }
 }
 
-void changeH(Graph& graph, std::pair<int, int> vertex){ // visit
-    graph.ChangeH(vertex.first, vertex.second);
+void changeH(std::vector<int>& H, std::pair<int, int> vertex){ // visit
+    H[vertex.first] = vertex.second;
 }
 
-void addH(const Graph& graph, std::vector<int>& AddDist){
+void addH(const std::vector<int>& H, std::vector<int>& AddDist){
     for (int i = 0; i < AddDist.size(); i++) {
-        AddDist[i] += graph.GetH(i);
+        AddDist[i] += H[i];
     }
+}
+
+void ZeroH(std::vector<int>& H){
+    for (int i = 0; i < H.size(); i++){
+        H[i] = 0;
+    }
+}
+
+int Find_Dist(int n, int m, int leon, int matilda, int milk){
+    std::vector <int> SummDist(n, 0);
+    std::vector<int> H(n, 0);
+    Graph graph(n);
+    for (int i = 0; i < m; i++) {
+        int a, b;
+        std::cin >> a >> b;
+        graph.AddEdge(a, b);
+    }
+    BFS(graph, H, leon, changeH);
+    addH(H, SummDist);
+    ZeroH(H);
+    BFS(graph, H, matilda, changeH);
+    addH(H, SummDist);
+    ZeroH(H);
+    BFS(graph, H, milk, changeH);
+    addH(H, SummDist);
+    ZeroH(H);
+    int ans = SummDist[0];
+    for (int i = 1; i < SummDist.size(); i++) {
+        ans = std::min(ans, SummDist[i]);
+    }
+    return ans;
 }
 
 int main() {
@@ -104,26 +116,7 @@ int main() {
     leon--;
     matilda--;
     milk--;
-    std::vector <int> SummDist(n, 0);
-    Graph graph(n);
-    for (int i = 0; i < m; i++) {
-        int a, b;
-        std::cin >> a >> b;
-        graph.AddEdge(a, b);
-    }
-    BFS(graph, leon, changeH);
-    addH(graph, SummDist);
-    graph.ZeroH();
-    BFS(graph, matilda, changeH);
-    addH(graph, SummDist);
-    graph.ZeroH();
-    BFS(graph, milk, changeH);
-    addH(graph, SummDist);
-    graph.ZeroH();
-    int ans = SummDist[0];
-    for (int i = 1; i < SummDist.size(); i++) {
-        ans = std::min(ans, SummDist[i]);
-    }
+    int ans = Find_Dist(n, m, leon, matilda, milk);
     std::cout << ans;
     return 0;
 }
