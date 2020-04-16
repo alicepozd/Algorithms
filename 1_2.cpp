@@ -42,19 +42,20 @@ public:
             sort(nextdoors[i].begin(), nextdoors[i].end());
         }
     }
-
-    std::ostream& operator<<(std::ostream& out) const {
-        for (int i = 0; i < nextdoors.size(); i++) {
-            for (int j = 0; j < nextdoors[i].size(); j++){
-                out << nextdoors[i][j] << " ";
-            }
-        }
-        out << "\n";
-        return out;
-    }
 private:
     std::vector<std::vector<int>> nextdoors;
 };
+
+std::ostream& operator<<(std::ostream& out, const Graph& graph) {
+    for (int i = 0; i < graph.VertexCount(); i++) {
+        std::vector<std::pair<int, int>> nextdoors = graph.GetNextVertexes(i);
+        for (int j = 0; j < nextdoors.size(); j++){
+            out << "(" << nextdoors[j].first << ", " << nextdoors[j].second << ") ";
+        }
+        out << "\n";
+    }
+    return out;
+}
 
 int TopSort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertices, int& InRes, int top) {
     std::stack<int> s;
