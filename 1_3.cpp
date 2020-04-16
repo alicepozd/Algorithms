@@ -5,19 +5,18 @@
 
 class Graph {
 public:
-    Graph(int VortexCount) {
-        nextdoors.resize(VortexCount);
-        VortexNum = VortexCount;
+    Graph(int VertexCount) {
+        nextdoors.resize(VertexCount);
     }
 
-    void AddVortex() {
-        std::vector<int> NewVortex(0);
-        nextdoors.push_back(NewVortex);
-        VortexNum++;
+    void AddVertex() {
+        std::vector<int> NewVertex(0);
+        nextdoors.push_back(NewVertex);
     }
 
     void AddEdge(int from, int to) {
-        nextdoors[from].push_back(to);
+        nextdoors[from - 1].push_back(to - 1);
+        nextdoors[to - 1].push_back(from - 1);
     }
 
     bool HasEdge(int from, int to) {
@@ -34,28 +33,19 @@ public:
     }
 
     int VertexCount() const {
-        return VortexNum;
-    }
-
-    void sortedges() {
-        for (int i = 0; i < nextdoors.size(); i++) {
-            sort(nextdoors[i].begin(), nextdoors[i].end());
-        }
+        return nextdoors.size();
     }
 
     void Print() const {
-        std::cout << "(";
         for (int i = 0; i < nextdoors.size(); i++) {
-            std::cout << "-";
             for (int j = 0; j < nextdoors[i].size(); j++){
                 std::cout << nextdoors[i][j] << " ";
             }
+            std::cout << "\n";
         }
-        std::cout << ")";
     }
 private:
     std::vector<std::vector<int>> nextdoors;
-    int VortexNum;
 };
 
 void DFS(const Graph& graph, std::vector<int>& vertices, std::vector<int>& used, int top, int& InRes) {
