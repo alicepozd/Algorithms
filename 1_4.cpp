@@ -7,31 +7,22 @@
 
 class Graph {
 public:
-    Graph(int VortexCount) {
-        nextdoors.resize(VortexCount);
-        VortexNum = VortexCount;
+    explicit Graph(int VertexCount) {
+        nextdoors.resize(VertexCount);
     }
 
-    void AddVortex() {
-        std::vector<int> NewVortex(0);
-        nextdoors.push_back(NewVortex);
-        VortexNum++;
+    void AddVertex() {
+        std::vector<int> NewVertex(0);
+        nextdoors.push_back(NewVertex);
     }
 
     void AddEdge(int from, int to) {
         nextdoors[from].push_back(to);
-        nextdoors[to].push_back(from);
     }
 
-    void sortedges() {
-        for (int i = 0; i < nextdoors.size(); i++) {
-            sort(nextdoors[i].begin(), nextdoors[i].end());
-        }
-    }
-
-    bool HasEdge(int from, int to) {
-        for (int i = 0; i < nextdoors[from].size(); i++) {
-            if (nextdoors[from][i] == to) {
+    bool HasEdge(int from, int to) const {
+        for (int i = 0; i < nextdoors[from - 1].size(); i++) {
+            if (nextdoors[from - 1][i] == to - 1) {
                 return true;
             }
         }
@@ -43,21 +34,28 @@ public:
     }
 
     int VertexCount() const {
-        return VortexNum;
+        return nextdoors.size();
     }
 
-    void Print() const {
+    void sortedges() {
         for (int i = 0; i < nextdoors.size(); i++) {
-            for (int j = 0; j < nextdoors[i].size(); j++){
-                std::cout << nextdoors[i][j] << " ";
-            }
-            std::cout << "\n";
+            sort(nextdoors[i].begin(), nextdoors[i].end());
         }
     }
 private:
     std::vector<std::vector<int>> nextdoors;
-    int VortexNum;
 };
+
+std::ostream& operator<<(std::ostream& out, const Graph& graph) {
+    for (int i = 0; i < graph.VertexCount(); i++) {
+        std::vector<std::pair<int, int>> nextdoors = graph.GetNextVertexes(i);
+        for (int j = 0; j < nextdoors.size(); j++){
+            out << "(" << nextdoors[j].first << ", " << nextdoors[j].second << ") ";
+        }
+        out << "\n";
+    }
+    return out;
+}
 
 void DelEdges (const Graph& graph, Graph& NewGraph, std::vector<int>& CompTime, std::vector<int>& used, int a){
     std::vector<int> next = graph.GetNextVertexes(a);
