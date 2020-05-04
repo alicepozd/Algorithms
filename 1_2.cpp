@@ -16,11 +16,11 @@ public:
         nextdoors.push_back(NewVertex);
     }
 
-    void AddEdge(int from, int to) {
+    void add_edge(int from, int to) {
         nextdoors[from].push_back(to);
     }
 
-    bool HasEdge(int from, int to) const {
+    bool has_edge(int from, int to) const {
         for (int i = 0; i < nextdoors[from - 1].size(); i++) {
             if (nextdoors[from - 1][i] == to - 1) {
                 return true;
@@ -29,15 +29,15 @@ public:
         return false;
     }
 
-    const std::vector<int>& GetNextVertexes(int from) const {
+    const std::vector<int>& get_next_vertexes(int from) const {
         return nextdoors[from];
     }
 
-    int VertexCount() const {
+    int vertex_count() const {
         return nextdoors.size();
     }
 
-    void sortedges() {
+    void sort_edges() {
         for (int i = 0; i < nextdoors.size(); i++) {
             sort(nextdoors[i].begin(), nextdoors[i].end());
         }
@@ -47,31 +47,31 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& out, const Graph& graph) {
-    for (int i = 0; i < graph.VertexCount(); i++) {
-        std::vector<std::pair<int, int>> nextdoors = graph.GetNextVertexes(i);
+    for (int i = 0; i < graph.vertex_count(); i++) {
+        const std::vector<int> nextdoors = graph.get_next_vertexes(i);
         for (int j = 0; j < nextdoors.size(); j++){
-            out << "(" << nextdoors[j].first << ", " << nextdoors[j].second << ") ";
+            out << nextdoors[j];
         }
         out << "\n";
     }
     return out;
 }
 
-int TopSort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertices, int& InRes, int top) {
+bool top_sort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertices, int top) {
     std::stack<int> s;
     s.push(top);
+    bool has_smth_add = false;
     while (!s.empty()){
-        int vertex = s.top();
-        while (!s.empty() and used[vertex] == Colors(BLACK)) {
-            s.pop();
-            vertex = s.top();
+        const int vertex = s.top();
+        if (!s.empty() and used[vertex] == Colors(BLACK)) {
+            continue;
         }
         used[vertex] = Colors(GRAY);
-        std::vector<int> next = graph.GetNextVertexes(vertex);
+        std::vector<int> next = graph.get_next_vertexes(vertex);
         bool add_in_stack = false;
         for (int i = next.size() - 1; i >= 0; i--) {
             if (used[next[i]] == Colors(GRAY)) {
-                return 0;
+                return true;
             }
             else if (used[next[i]] == Colors(WHITE)) {
                 s.push(next[i]);
@@ -81,48 +81,42 @@ int TopSort(const Graph& graph, std::vector<int>& used, std::vector<int>& vertic
         if (!add_in_stack) {
             used[vertex] = Colors(BLACK);
             s.pop();
-            vertices[vertices.size() - 1 - InRes] = vertex;
-            InRes++;
+            vertices.push_back(vertex);
+            has_smth_add = true;
         }
     }
-    if (InRes){
-        return true;
-    }
-    else {
-        return false;
-    }
+    return !has_smth_add;
 }
 
 int main() {
     int n, m;
     std::cin >> n >> m;
     Graph graph(n);
-    std::vector<int> sources (n , 1);
+    std::vector<bool> has_no_input_edges (n , true);
     for (int i = 0; i < m; i++){
         int from, to;
         std::cin >> from >> to;
-        graph.AddEdge(from, to);
-        sources[to] = 0;
+        graph.add_edge(from, to);
+        has_no_input_edges[to] = false;
     }
-    graph.sortedges();
+    graph.sort_edges();
     std::vector<int> vertices (n, 0);
     std::vector<int> used (n, 0);
-    int InRes = 0;
-    bool Is_Sorted;
+    bool has_cycle;
     for (int i = 0; i < n; i++) {
-        if (sources[i] == 1) {
-            Is_Sorted = TopSort(graph, used, vertices, InRes, i);
-            if (!Is_Sorted) {
+        if (has_no_input_edges[i] == true) {
+            has_cycle = top_sort(graph, used, vertices, i);
+            if (has_cycle) {
                 break;
             }
         }
     }
-    if (!Is_Sorted) {
+    if (has_cycle) {
         std::cout << "NO";
     }
     else{
         std::cout << "YES\n";
-        for (int i = 0; i < n; i++){
+        for (int i = n - 1; i >= 0; i++){
             std::cout << vertices[i] << " ";
         }
     }
