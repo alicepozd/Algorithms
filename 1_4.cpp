@@ -11,131 +11,127 @@ public:
         nextdoors.resize(VertexCount);
     }
 
-    void AddVertex() {
+    void add_vertex() {
         std::vector<int> NewVertex(0);
         nextdoors.push_back(NewVertex);
     }
 
-    void AddEdge(int from, int to) {
+    void add_edge(int from, int to) {
         nextdoors[from].push_back(to);
     }
 
-    bool HasEdge(int from, int to) const {
-        for (int i = 0; i < nextdoors[from - 1].size(); i++) {
-            if (nextdoors[from - 1][i] == to - 1) {
+    bool has_edge(int from, int to) const {
+        for (auto v : nextdoors[from - 1]) {
+            if (v == to - 1) {
                 return true;
             }
         }
         return false;
     }
 
-    const std::vector<int>& GetNextVertexes(int from) const {
+    const std::vector<int>& get_next_vertexes(int from) const {
         return nextdoors[from];
     }
 
-    int VertexCount() const {
+    int vertex_count() const {
         return nextdoors.size();
-    }
-
-    void sortedges() {
-        for (int i = 0; i < nextdoors.size(); i++) {
-            sort(nextdoors[i].begin(), nextdoors[i].end());
-        }
     }
 private:
     std::vector<std::vector<int>> nextdoors;
 };
 
 std::ostream& operator<<(std::ostream& out, const Graph& graph) {
-    for (int i = 0; i < graph.VertexCount(); i++) {
-        std::vector<std::pair<int, int>> nextdoors = graph.GetNextVertexes(i);
-        for (int j = 0; j < nextdoors.size(); j++){
-            out << "(" << nextdoors[j].first << ", " << nextdoors[j].second << ") ";
+    for (int i = 0; i < graph.vertex_count(); i++) {
+        const std::vector<int> nextdoors = graph.get_next_vertexes(i);
+        for (auto v : nextdoors){
+            out << v;
         }
         out << "\n";
     }
     return out;
 }
 
-void DelEdges (const Graph& graph, Graph& NewGraph, std::vector<int>& CompTime, std::vector<int>& used, int a){
-    std::vector<int> next = graph.GetNextVertexes(a);
-    for (int i = 0; i < next.size(); i++) {
-        if (used[next[i]] == 2 and CompTime[next[i]] == CompTime[a]) {
-            NewGraph.AddEdge(a, next[i]);
+void add_edges(const Graph& graph, Graph& NewGraph, std::vector<int>& CompTime, std::vector<int>& used, int a){ // добавление в новый граф рёбер из а
+    std::vector<int> next = graph.get_next_vertexes(a);                                                           // ведущих в уже посещённые вершины
+    for (auto v : next) {                                                                             // при условии, что вершины не разделены мостом
+        if (used[v] == 2 and CompTime[v] == CompTime[a]) {                                     // CompTime нужен чтобы определять посещена ли вершина
+            NewGraph.add_edge(a, v);
         }
     }
 }
 
-void timeDFS(const Graph& graph, Graph& NewGraph, int top, void (*visit)(const Graph& graph, Graph& NewGraph, std::vector<int>& CompTime, std::vector<int>& used, int i)) {
-    int n = graph.VertexCount();
+void time_DFS(const Graph& graph, Graph& NewGraph, int top) { // алгоритм основан на обходе DFS, ищет мосты
+    int n = graph.vertex_count();
     std::vector<int> used (n, 0);
     std::stack<int> s;
-    std::vector<int> Time (n, 0);
-    std::vector<int> CompTime (n, 0);
+    std::vector<int> Time (n, 0); // время захода в вершину
+    std::vector<int> CompTime (n, 0); // после выполнения алгоритма, в этом массиве окажутся компоненты связности графа, если убрать мосты
     s.push(top);
     int time = 0;
     while (!s.empty()){
-        int vertex = s.top();
-        while (!s.empty() and used[vertex] == 2) {
-            s.pop();
-            vertex = s.top();
+        const int vertex = s.top();
+        if (!s.empty() and used[vertex] == 2) {
+            continue;
         }
         used[vertex] = 1;
-        std::vector<int> next = graph.GetNextVertexes(vertex);
-        int p = 0;
+        std::vector<int> next = graph.get_next_vertexes(vertex);
+        bool is_leaf = true;
         for (int i = next.size() - 1; i >= 0; i--) {
-            if (!used[next[i]]) {
+            if (used[next[i]] == 0) {
                 s.push(next[i]);
                 Time[next[i]] = Time[vertex] + 1;
                 CompTime[next[i]] = Time[vertex] + 1;
                 time++;
-                p = 1;
+                is_leaf = false;
             }
             else if (used[next[i]] == 1) {
                 CompTime[vertex] = std::min(CompTime[vertex], CompTime[next[i]]);
             }
         }
-        if (!p) {
+        if (is_leaf) {
             used[vertex] = 2;
             s.pop();
-            for (int i = 0; i < next.size(); i++) {
-                if (Time[next[i]] != Time[vertex] - 1) {
-                    if (used[next[i]] == 1) {
-                        CompTime[vertex] = std::min(CompTime[vertex], Time[next[i]]);
+            for (auto v : next) {
+                if (Time[v] != Time[vertex] - 1) {
+                    if (used[v] == 1) {
+                        CompTime[vertex] = std::min(CompTime[vertex], Time[v]);
                     }
                     else {
-                        CompTime[vertex] = std::min(CompTime[vertex], CompTime[next[i]]);
+                        CompTime[vertex] = std::min(CompTime[vertex], CompTime[v]);
                     }
                 }
             }
-            visit(graph, NewGraph, CompTime, used, vertex);
+            add_edges(graph, NewGraph, CompTime, used, vertex);
         }
     }
 }
 
-void simple(const Graph& graph, Graph& NewGraph){
-    timeDFS(graph, NewGraph, 0, DelEdges);
+void simple(const Graph& graph, Graph& NewGraph){ // упрощение графа, убирает мосты
+    Graph TempGraph(graph.vertex_count());
+    time_DFS(graph, TempGraph, 0);
+    time_DFS(TempGraph, NewGraph, 0);
 }
 
-void modif(std::vector<int>& Way, int a, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces) {
+void edges_faces_update(std::vector<int>& Way, int a, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces) {
+    // обновление граней рёбер при укладке нового пути
     std::vector<int> temp(0);
-    int p = 0;
+    bool is_way_continue = false;
     for (int i = 0; i < Way.size(); i++) {
-        if (!p){
+        if (!is_way_continue){
             if (Way[i] == a) {
-                p = 1;
+                is_way_continue = true;
                 temp.push_back(a);
             }
             else {
-                for (int g = 0; g < EagesFaces[Way[i]].size(); g++) {
-                    if (EagesFaces[Way[i]][g].first == Way[i + 1]){
-                        EagesFaces[Way[i]][g].second.first = 0;
+                for (int g = 0; g < EdgesFaces[Way[i]].size(); g++) {
+                    if (EdgesFaces[Way[i]][g].first == Way[i + 1]){
+                        EdgesFaces[Way[i]][g].second.first = 0;
                         break;
                     }
                 }
-                for (int g = 0; g < EagesFaces[Way[i + 1]].size(); g++) {
-                    if (EagesFaces[Way[i + 1]][g].first == Way[i]){
-                        EagesFaces[Way[i + 1]][g].second.first = 0;
+                for (int g = 0; g < EdgesFaces[Way[i + 1]].size(); g++) {
+                    if (EdgesFaces[Way[i + 1]][g].first == Way[i]){
+                        EdgesFaces[Way[i + 1]][g].second.first = 0;
                         break;
                     }
                 }
@@ -151,41 +147,42 @@ void modif(std::vector<int>& Way, int a, std::vector<std::vector<std::pair<int, 
     }
 }
 
-void FindWay(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces, std::vector<int>& Way, int i, int NextWayBegin) {
-    std::vector<int> used(graph.VertexCount(), 0);
+void find_way(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, std::vector<int>& Way, int i, int NextWayBegin) {
+    // нахождение следующего пути начинающегося в вершине i, проходящего через некоторое количество не уложенных вешин, первая из которых NextWayBegin, и заканчивающийся в уже уложенной
+    std::vector<int> used(graph.vertex_count(), 0);
     Way.push_back(i);
+    used[i] = 1;
     int prev = -1;
     int now = i;
-    used[i] = 1;
     if (NextWayBegin != -1) {
         Way.push_back(NextWayBegin);
         prev = now;
         now = NextWayBegin;
         used[NextWayBegin] = 1;
     }
-    bool p = false;
-    while (!p or VertexFaces[now].empty()) {
-        p = true;
-        if (prev != -1 and !VertexFaces[now].empty()) {
+    bool is_begin = false; // нужен чтобы просто зайти в цикл, в самом начале из уже уложенной вершины
+    while (!is_begin or VertexFaces[now].empty()) { // по сути проверка уложена ли уже вершина
+        is_begin = true;
+        if (prev != -1 and !VertexFaces[now].empty()) { // случай, когда при входе в цикл в пути уже две вершины
             break;
         }
-        for (int j = 0; j < EagesFaces[now].size(); j++) {
-            if (!EagesFaces[now][j].second.first and EagesFaces[now][j].first != prev) {
-                EagesFaces[now][j].second.first = -1;
-                for (int g = 0; g < EagesFaces[EagesFaces[now][j].first].size(); g++) {
-                    if (EagesFaces[EagesFaces[now][j].first][g].first == now){
-                        EagesFaces[EagesFaces[now][j].first][g].second.first = -1;
+        for (int j = 0; j < EdgesFaces[now].size(); j++) {
+            if (!EdgesFaces[now][j].second.first and EdgesFaces[now][j].first != prev) {
+                EdgesFaces[now][j].second.first = -1;
+                for (int g = 0; g < EdgesFaces[EdgesFaces[now][j].first].size(); g++) {
+                    if (EdgesFaces[EdgesFaces[now][j].first][g].first == now){
+                        EdgesFaces[EdgesFaces[now][j].first][g].second.first = -1;
                         break;
                     }
                 }
                 prev = now;
-                if (used[EagesFaces[now][j].first] == 1) {
-                    Way.push_back(EagesFaces[now][j].first);
-                    modif(Way, EagesFaces[now][j].first, EagesFaces);
+                if (used[EdgesFaces[now][j].first] == 1) {
+                    Way.push_back(EdgesFaces[now][j].first);
+                    edges_faces_update(Way, EdgesFaces[now][j].first, EdgesFaces);
                     return;
                 }
-                used[EagesFaces[now][j].first] = 1;
-                now = EagesFaces[now][j].first;
+                used[EdgesFaces[now][j].first] = 1;
+                now = EdgesFaces[now][j].first;
                 Way.push_back(now);
                 break;
             }
@@ -193,7 +190,7 @@ void FindWay(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::v
     }
 }
 
-void EagesBFS(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces, std::vector<std::vector<bool>>& used, std::set<int>& M, int a) {
+void edges_BFS(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, std::vector<std::vector<bool>>& used, std::set<int>& M, int a) {
     std::queue<int> q;
     q.push(a);
     while (!q.empty()) {
@@ -211,65 +208,84 @@ void EagesBFS(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<s
             }
             continue;
         }
-        for (int i = 0; i < EagesFaces[now].size(); i++) {
+        for (int i = 0; i < EdgesFaces[now].size(); i++) {
             if (!used[now][i]) {
                 used[now][i] = true;
-                q.push(EagesFaces[now][i].first);
+                q.push(EdgesFaces[now][i].first);
             }
         }
     }
 }
 
-std::pair<int, int> NextWayBegin(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces, int& BreakComp){
+std::pair<bool, int> update_possible_way_begin_for_has_no_faces_edge(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, std::vector<std::vector<bool>>& used, std::stack<std::pair<int, std::pair<int, int>>>& WayBegin, std::pair<int, int> edge_numb){
+    std::set<int> M;
+    int element = -1;
+    for (auto elem : VertexFaces[edge_numb.first]) {
+        M.insert(elem);
+    }
+    used[edge_numb.first][edge_numb.second] = true;
+    edges_BFS(VertexFaces, EdgesFaces, used, M, EdgesFaces[edge_numb.first][edge_numb.second].first);
+    for (auto elem : M) {
+        element = elem;
+    }
+    if (M.empty()) {
+        return std::make_pair(false, 0); // если невозможно выбрать путь, а значит граф непланарен
+    }
+    WayBegin.push(std::make_pair(M.size(), std::make_pair(edge_numb.first, EdgesFaces[edge_numb.first][edge_numb.second].first)));
+    return std::make_pair(true, element);
+}
+
+std::pair<bool, int> update_possible_way_begin_for_has_one_face_edge(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, std::stack<std::pair<int, std::pair<int, int>>>& WayBegin, std::pair<int, int> edge_numb){
+    std::set<int> M;
+    int element = -1;
+    for (auto elem : VertexFaces[edge_numb.first]) {
+        if (VertexFaces[EdgesFaces[edge_numb.first][edge_numb.second].first].count(elem)){
+            M.insert(elem);
+        }
+    }
+    for (auto elem : M) {
+        element = elem;
+    }
+    if (M.empty()) {
+        return std::make_pair(false, 0); // если невозможно выбрать путь, а значит граф непланарен
+    }
+    WayBegin.push(std::make_pair(M.size(), std::make_pair(edge_numb.first, EdgesFaces[edge_numb.first][edge_numb.second].first)));
+    return std::make_pair(true, element);
+}
+
+std::pair<int, int> next_way_begin(std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, int& BreakComp){
+    //находим начало следующего пути, который будем укладывать
+    //укладываем тот, у которого меньше допустимых компонент
     std::stack<std::pair<int, std::pair<int, int>>> WayBegin;
     std::stack<int> Elements;
-    std::vector<std::vector<bool>> used(EagesFaces.size(), std::vector<bool>(0));
-    for (int i = 0; i < EagesFaces.size(); i++) {
-        for (int j = 0; j < EagesFaces[i].size(); j++) {
+    std::vector<std::vector<bool>> used(EdgesFaces.size(), std::vector<bool>(0));
+    for (int i = 0; i < EdgesFaces.size(); i++) {
+        for (int j = 0; j < EdgesFaces[i].size(); j++) {
             used[i].push_back(false);
         }
     }
-    int element = -1;
     for (int i = 0; i < VertexFaces.size(); i++) {
         if (!VertexFaces[i].empty()) {
-            for (int j = 0; j < EagesFaces[i].size(); j++) {
-                if (VertexFaces[EagesFaces[i][j].first].empty()) {
-                    std::set<int> M;
-                    for (auto elem : VertexFaces[i]) {
-                        M.insert(elem);
+            for (int j = 0; j < EdgesFaces[i].size(); j++) {
+                if (VertexFaces[EdgesFaces[i][j].first].empty()) {
+                    std::pair<bool, int> element = update_possible_way_begin_for_has_no_faces_edge(VertexFaces, EdgesFaces, used, WayBegin, std::make_pair(i, j));
+                    if (!element.first) {
+                        return std::make_pair(-2, -2);
                     }
-                    used[i][j] = true;
-                    EagesBFS(VertexFaces, EagesFaces, used, M, EagesFaces[i][j].first);
-                    for (auto elem : M) {
-                        element = elem;
-                    }
-                    Elements.push(element);
-                    if (M.empty()) {
-                        return std::pair<int, int>(-2, -2);
-                    }
-                    WayBegin.push(std::pair<int, std::pair<int, int>>(M.size(),std::pair<int, int>(i, EagesFaces[i][j].first)));
+                    Elements.push(element.second);
                 }
-                else if (EagesFaces[i][j].second.first == 0) {
-                    std::set<int> M;
-                    for (auto elem : VertexFaces[i]) {
-                        if (VertexFaces[EagesFaces[i][j].first].count(elem)){
-                            M.insert(elem);
-                        }
+                else if (EdgesFaces[i][j].second.first == 0) {
+                    std::pair<bool, int> element = update_possible_way_begin_for_has_one_face_edge(VertexFaces, EdgesFaces, WayBegin, std::make_pair(i, j));
+                    if (!element.first) {
+                        return std::make_pair(-2, -2);
                     }
-                    for (auto elem : M) {
-                        element = elem;
-                    }
-                    Elements.push(element);
-                    if (M.empty()) {
-                        return std::pair<int, int>(-2, -2);
-                    }
-                    WayBegin.push(std::pair<int, std::pair<int, int>>(M.size(),std::pair<int, int>(i, EagesFaces[i][j].first)));
+                    Elements.push(element.second);
                 }
             }
         }
     }
     if (WayBegin.empty()) {
-        return std::pair<int, int>(-1, -1);
+        return std::make_pair(-1, -1);
     }
     std::pair<int, std::pair<int, int> > ans = WayBegin.top();
     BreakComp = Elements.top();
@@ -284,114 +300,104 @@ std::pair<int, int> NextWayBegin(std::vector<std::set<int>>& VertexFaces, std::v
     return ans.second;
 }
 
-bool NewComp(const std::vector<int>& Way,std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces, int& CompNumb, int& BreakComp){
+void change_faces(const std::vector<int>& Way,std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, int& CompNumb, int& BreakComp) {
+    //изменение граней в некоторой ранее уложенной части графа
     int prev = -1;
     int now = Way[0];
     while (now != Way[Way.size() - 1]) {
-        for (int j = 0; j < EagesFaces[now].size(); j++) {
-            if ((EagesFaces[now][j].second.first == BreakComp or EagesFaces[now][j].second.second == BreakComp) and EagesFaces[now][j].first != prev) {
-                if (EagesFaces[now][j].second.first == BreakComp) {
-                    EagesFaces[now][j].second.first = CompNumb + 1;
-                    for (int g = 0; g < EagesFaces[EagesFaces[now][j].first].size(); g++) {
-                        if (EagesFaces[EagesFaces[now][j].first][g].first == now) {
-                            if (EagesFaces[EagesFaces[now][j].first][g].second.first == BreakComp) {
-                                EagesFaces[EagesFaces[now][j].first][g].second.first = CompNumb + 1;
-                            }
-                            else {
-                                EagesFaces[EagesFaces[now][j].first][g].second.second = CompNumb + 1;
-                            }
-                        }
-                    }
+        for (int j = 0; j < EdgesFaces[now].size(); j++) {
+            if ((EdgesFaces[now][j].second.first == BreakComp or EdgesFaces[now][j].second.second == BreakComp) and EdgesFaces[now][j].first != prev) {
+                if (EdgesFaces[now][j].second.first == BreakComp) {
+                    EdgesFaces[now][j].second.first = CompNumb + 1;
                 }
                 else {
-                    EagesFaces[now][j].second.second = CompNumb + 1;
-                    for (int g = 0; g < EagesFaces[EagesFaces[now][j].first].size(); g++) {
-                        if (EagesFaces[EagesFaces[now][j].first][g].first == now) {
-                            if (EagesFaces[EagesFaces[now][j].first][g].second.first == BreakComp) {
-                                EagesFaces[EagesFaces[now][j].first][g].second.first = CompNumb + 1;
-                            }
-                            else {
-                                EagesFaces[EagesFaces[now][j].first][g].second.second = CompNumb + 1;
-                            }
+                    EdgesFaces[now][j].second.second = CompNumb + 1;
+                }
+                for (int g = 0; g < EdgesFaces[EdgesFaces[now][j].first].size(); g++) {
+                    if (EdgesFaces[EdgesFaces[now][j].first][g].first == now) {
+                        if (EdgesFaces[EdgesFaces[now][j].first][g].second.first == BreakComp) {
+                            EdgesFaces[EdgesFaces[now][j].first][g].second.first = CompNumb + 1;
+                        }
+                        else {
+                            EdgesFaces[EdgesFaces[now][j].first][g].second.second = CompNumb + 1;
                         }
                     }
                 }
                 prev = now;
-                now = EagesFaces[now][j].first;
+                now = EdgesFaces[now][j].first;
                 VertexFaces[now].insert(CompNumb + 1);
                 VertexFaces[now].erase(BreakComp);
                 break;
             }
         }
     }
+}
+
+void change_faces_in_new_way(const std::vector<int>& Way,std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, int& CompNumb, int& BreakComp) {
+    //изменение граней в новой части графа
     for (int i = 0; i < Way.size(); i++) {
-        if (i == Way.size() - 1 and Way[0] == Way[Way.size() - 1]) {
-            for (int j = 0; j < EagesFaces[Way[i]].size(); j++) {
-                if (EagesFaces[Way[i]][j].first == Way[i - 1]){
-                    EagesFaces[Way[i]][j].second.first = BreakComp;
-                    EagesFaces[Way[i]][j].second.second = CompNumb + 1;
+        if ((i == Way.size() - 1 and Way[0] == Way[Way.size() - 1]) or i != 0) {
+            if (!(i == Way.size() - 1 and Way[0] == Way[Way.size() - 1])) {
+                VertexFaces[Way[i]].insert(BreakComp);
+            }
+            for (int j = 0; j < EdgesFaces[Way[i]].size(); j++) {
+                if (EdgesFaces[Way[i]][j].first == Way[i - 1]){
+                    EdgesFaces[Way[i]][j].second.first = BreakComp;
+                    EdgesFaces[Way[i]][j].second.second = CompNumb + 1;
                 }
             }
-            for (int j = 0; j < EagesFaces[Way[i - 1]].size(); j++) {
-                if (EagesFaces[Way[i - 1]][j].first == Way[i]){
-                    EagesFaces[Way[i - 1]][j].second.second = CompNumb + 1;
-                    EagesFaces[Way[i - 1]][j].second.first = BreakComp;
+            for (int j = 0; j < EdgesFaces[Way[i - 1]].size(); j++) {
+                if (EdgesFaces[Way[i - 1]][j].first == Way[i]){
+                    EdgesFaces[Way[i - 1]][j].second.second = CompNumb + 1;
+                    EdgesFaces[Way[i - 1]][j].second.first = BreakComp;
                 }
             }
-            break;
-        }
-        if (i != 0){
-            VertexFaces[Way[i]].insert(BreakComp);
-            for (int j = 0; j < EagesFaces[Way[i]].size(); j++) {
-                if (EagesFaces[Way[i]][j].first == Way[i - 1]){
-                    EagesFaces[Way[i]][j].second.first = BreakComp;
-                    EagesFaces[Way[i]][j].second.second = CompNumb + 1;
-                }
-            }
-            for (int j = 0; j < EagesFaces[Way[i - 1]].size(); j++) {
-                if (EagesFaces[Way[i - 1]][j].first == Way[i]){
-                    EagesFaces[Way[i - 1]][j].second.second = CompNumb + 1;
-                    EagesFaces[Way[i - 1]][j].second.first = BreakComp;
-                }
+            if (i == Way.size() - 1 and Way[0] == Way[Way.size() - 1]){
+                break;
             }
         }
         VertexFaces[Way[i]].insert(CompNumb + 1);
-        for (int j = 0; j < EagesFaces[Way[i]].size(); j++) {
-            if (EagesFaces[Way[i]][j].second.first == -1) {
-                EagesFaces[Way[i]][j].second.first = BreakComp;
-                EagesFaces[Way[i]][j].second.second = CompNumb + 1;
+        for (int j = 0; j < EdgesFaces[Way[i]].size(); j++) {
+            if (EdgesFaces[Way[i]][j].second.first == -1) {
+                EdgesFaces[Way[i]][j].second.first = BreakComp;
+                EdgesFaces[Way[i]][j].second.second = CompNumb + 1;
             }
         }
     }
+}
+
+bool laying_down_new_component(const std::vector<int>& Way,std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, int& CompNumb, int& BreakComp){
+    change_faces(Way, VertexFaces, EdgesFaces,  CompNumb, BreakComp);
+    change_faces_in_new_way(Way, VertexFaces, EdgesFaces,  CompNumb, BreakComp);
     CompNumb++;
     return true;
 }
 
-bool Gamma(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EagesFaces, int i){
-    std::vector<int> MainWay(0);
+bool one_component_gamma(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::vector<std::vector<std::pair<int, std::pair<int, int>>>>& EdgesFaces, int i){ // гамма алгоритм для одной компоненты связности
+    std::vector<int> MainWay(0);                                                                                                                                     // - представитель компоненты
     int CompNumb = 1;
     int BreakComp = 1;
     int NextBegin = -1;
-    FindWay(graph, VertexFaces, EagesFaces, MainWay, i, NextBegin);
+    find_way(graph, VertexFaces, EdgesFaces, MainWay, i, NextBegin);
     if (MainWay.size() == 1){
         return true;
     }
     VertexFaces[MainWay[0]].insert(1);
-    NewComp(MainWay, VertexFaces, EagesFaces, CompNumb, BreakComp);
+    laying_down_new_component(MainWay, VertexFaces, EdgesFaces, CompNumb, BreakComp);
     while (true) {
         std::vector<int> NextWay(0);
-        std::pair<int, int> NextWayBegining = NextWayBegin(VertexFaces, EagesFaces, BreakComp);
+        std::pair<int, int> NextWayBegining = next_way_begin(VertexFaces, EdgesFaces, BreakComp);
         if (NextWayBegining.second == -1) {
             break;
         }
         else if (NextWayBegining.second == -2) {
             return false;
         }
-        FindWay(graph, VertexFaces, EagesFaces, NextWay, NextWayBegining.first, NextWayBegining.second);
+        find_way(graph, VertexFaces, EdgesFaces, NextWay, NextWayBegining.first, NextWayBegining.second);
         if (NextWay.size() == 1){
             break;
         }
-        if (!NewComp(NextWay, VertexFaces, EagesFaces, CompNumb, BreakComp)){
+        if (!laying_down_new_component(NextWay, VertexFaces, EdgesFaces, CompNumb, BreakComp)){
             return false;
         }
 
@@ -399,18 +405,18 @@ bool Gamma(const Graph& graph, std::vector<std::set<int>>& VertexFaces, std::vec
     return true;
 }
 
-bool InitialiseGamma(const Graph& graph) {
-    std::vector<std::set<int>> VertexFaces(graph.VertexCount(), std::set<int>());
-    std::vector<std::vector<std::pair<int, std::pair<int, int>>>> EagesFaces(graph.VertexCount(), std::vector<std::pair<int, std::pair<int, int>>>(0));
-    for (int i = 0; i < graph.VertexCount(); i++){
-        std::vector<int> next = graph.GetNextVertexes(i);
-        for (int j = 0; j < next.size(); j++) {
-            EagesFaces[i].push_back(std::pair<int, std::pair<int, int>>(next[j], std::pair<int, int>(0, 0)));
+bool gamma(const Graph& graph) {
+    std::vector<std::set<int>> VertexFaces(graph.vertex_count(), std::set<int>());
+    std::vector<std::vector<std::pair<int, std::pair<int, int>>>> EdgesFaces(graph.vertex_count(), std::vector<std::pair<int, std::pair<int, int>>>(0));
+    for (int i = 0; i < graph.vertex_count(); i++){
+        std::vector<int> next = graph.get_next_vertexes(i);
+        for (auto v : next) {
+            EdgesFaces[i].push_back(std::pair<int, std::pair<int, int>>(v, std::pair<int, int>(0, 0)));
         }
     }
-    for (int i = 0; i < graph.VertexCount(); i++) {
+    for (int i = 0; i < graph.vertex_count(); i++) { // запуск гамма алгоритма тля всех компонент связности
         if (VertexFaces[i].empty()) {
-            if (!Gamma(graph, VertexFaces, EagesFaces, i)) {
+            if (!one_component_gamma(graph, VertexFaces, EdgesFaces, i)) {
                 return false;
             }
         }
@@ -418,14 +424,23 @@ bool InitialiseGamma(const Graph& graph) {
     return true;
 }
 
-bool planary(Graph& graph){
-    int n = graph.VertexCount();
-    Graph NewGraph1(n);
-    simple(graph, NewGraph1);
+void sort_edges(const Graph& graph, Graph& SortEdgesGraph) {
+    for (int i = 0; i < graph.vertex_count(); i++){
+        std::vector<int> next = graph.get_next_vertexes(i);
+        sort(next.begin(), next.end());
+        for (int j = 0; j < next.size(); j++) {
+            SortEdgesGraph.add_edge(i, j);
+        }
+    }
+}
+
+bool planary(const Graph& graph){ // проверка является ли граф планарным
+    int n = graph.vertex_count();
     Graph NewGraph(n);
-    simple(NewGraph1, NewGraph);
-    NewGraph.sortedges();
-    return InitialiseGamma(NewGraph);
+    simple(graph, NewGraph);
+    Graph SortEdgesGraph(n);
+    sort_edges(NewGraph, SortEdgesGraph);
+    return gamma(NewGraph);
 }
 
 int main() {
@@ -436,8 +451,8 @@ int main() {
         int a, b;
         std::cin >> a >> b;
         if (a != b) {
-            if (!graph.HasEdge(a, b)){
-                graph.AddEdge(b, a);
+            if (!graph.has_edge(a, b)){
+                graph.add_edge(b, a);
             }
         }
     }
