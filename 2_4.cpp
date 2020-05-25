@@ -3,10 +3,12 @@
 #include <bitset>
 #include <algorithm>
 
-void HasWay(std::vector<std::bitset<1000>>& Matrix){
+#define MAX_MATRIX_SIZE 1000
+
+void HasWay(std::vector<std::bitset<MAX_MATRIX_SIZE>>& Matrix){
     for (int k = 0; k < Matrix.size(); k++){
         for (int i = 0; i < Matrix.size(); i++){
-            if (Matrix[i].test(999 - k)) {
+            if (Matrix[i].test(MAX_MATRIX_SIZE - 1 - k)) {
                 Matrix[i] |= (Matrix[k]);
             }
         }
@@ -16,14 +18,14 @@ void HasWay(std::vector<std::bitset<1000>>& Matrix){
 int main(){
     int n = 0;
     std::cin >> n;
-    std::vector<std::bitset<1000>> Matrix (0);
+    std::vector<std::bitset<MAX_MATRIX_SIZE>> Matrix (0);
     for (int i = 0; i < n; i++) {
         std::string s;
         std::cin >> s;
-        std::bitset<1000> line;
+        std::bitset<MAX_MATRIX_SIZE> line;
         for (int j = 0; j < s.size(); j++){
             if (s[j] == '1') {
-                line.set(999 - j, true);
+                line.set(MAX_MATRIX_SIZE - 1 - j, true);
             }
         }
         Matrix.push_back(line);
