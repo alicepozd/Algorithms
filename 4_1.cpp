@@ -56,7 +56,6 @@ struct sparse_table{
 
 int get_second_statistics(const sparse_table& sp, const std::vector<int>& array, int a, int b){
     int min_numb = sp.get_min(a, b);
-//    std::cout << "(" << min_numb << ") ";
     if (a == min_numb){
         return sp.get_min(a + 1, b);
     }
