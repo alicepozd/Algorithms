@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 class Graph {
@@ -33,12 +34,6 @@ public:
     int VertexCount() const {
         return nextdoors.size();
     }
-
-    void sortedges() {
-        for (int i = 0; i < nextdoors.size(); i++) {
-            sort(nextdoors[i].begin(), nextdoors[i].end());
-        }
-    }
 private:
     std::vector<std::vector<std::pair<int, int>>> nextdoors;
 };
@@ -54,32 +49,37 @@ std::ostream& operator<<(std::ostream& out, const Graph& graph) {
     return out;
 }
 
-void recount(const Graph& graph, std::vector<int>& min_distance, int vertex){
-    min_distance[vertex] = -1;
+void recount(const Graph& graph, std::vector<int>& min_distance, std::set<std::pair<int, int>>& possible_edges, int vertex){
+    min_distance[vertex] = 0;
     std::vector<std::pair<int, int>> next = graph.GetNextVertexes(vertex);
     for (int i = 0; i < next.size(); i++){
-        min_distance[next[i].first] = std::min(min_distance[next[i].first], next[i].second);
+        if (min_distance[next[i].first] <= next[i].second){
+            continue;
+        }
+        possible_edges.erase(possible_edges.find(std::make_pair(min_distance[next[i].first], next[i].first)));
+        possible_edges.insert(std::make_pair(next[i].second, next[i].first));
+        min_distance[next[i].first] = next[i].second;
     }
 }
 
-int find_next_edge_dist(const Graph& graph, std::vector<int>& min_distance){
-    std::pair<int, int> next_eage = std::make_pair(-1, INT32_MAX);
-    for (int i = 0; i < min_distance.size(); i++) {
-        if (min_distance[i] != -1 && (min_distance[i] < next_eage.second)){
-            next_eage.first = i;
-            next_eage.second = min_distance[i];
-        }
-    }
-    recount(graph, min_distance, next_eage.first);
-    return next_eage.second;
+int find_next_edge_dist(const Graph& graph, std::vector<int>& min_distance, std::set<std::pair<int, int>>& possible_edges){
+    std::pair<int, int> vertex = *(possible_edges.begin());
+    possible_edges.erase(vertex);
+    recount(graph, min_distance, possible_edges, vertex.second);
+    return vertex.first;
 }
 
 int prim_weight(const Graph& graph){
     std::vector<int> min_distance(graph.VertexCount(), INT32_MAX);
-    recount(graph, min_distance, 0);
+    min_distance[0] = 0;
+    std::set<std::pair<int, int>> possible_edges;
+    possible_edges.insert(std::make_pair(0, 0));
+    for (int i = 1; i < graph.VertexCount(); i++) {
+        possible_edges.insert(std::make_pair(INT32_MAX, i));
+    }
     int weight = 0;
-    for (int i = 1; i < graph.VertexCount(); i++){
-        weight += find_next_edge_dist(graph, min_distance);
+    while (!possible_edges.empty()){
+        weight += find_next_edge_dist(graph, min_distance, possible_edges);
     }
     return weight;
 }
