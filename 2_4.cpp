@@ -3,13 +3,13 @@
 #include <bitset>
 #include <algorithm>
 
-#define MAX_MATRIX_SIZE 1000
-
-void HasWay(std::vector<std::bitset<MAX_MATRIX_SIZE>>& Matrix){
+void HasWay(std::vector<std::vector<std::bitset<32>>>& Matrix){
     for (int k = 0; k < Matrix.size(); k++){
         for (int i = 0; i < Matrix.size(); i++){
-            if (Matrix[i].test(MAX_MATRIX_SIZE - 1 - k)) {
-                Matrix[i] |= (Matrix[k]);
+            if (Matrix[i][k / 32].test(k % 32)) {
+                for (int j = 0; j < Matrix.size() / 32 + 1; j++){
+                    Matrix[i][j] |= (Matrix[k][j]);
+                }
             }
         }
     }
@@ -18,23 +18,36 @@ void HasWay(std::vector<std::bitset<MAX_MATRIX_SIZE>>& Matrix){
 int main(){
     int n = 0;
     std::cin >> n;
-    std::vector<std::bitset<MAX_MATRIX_SIZE>> Matrix (0);
+    std::vector<std::vector<std::bitset<32>>> Matrix (0);
     for (int i = 0; i < n; i++) {
-        std::string s;
-        std::cin >> s;
-        std::bitset<MAX_MATRIX_SIZE> line;
-        for (int j = 0; j < s.size(); j++){
-            if (s[j] == '1') {
-                line.set(MAX_MATRIX_SIZE - 1 - j, true);
+        std::vector<std::bitset<32>> string(0);
+        for (int j = 0; j < n / 32 + 1; j++) {
+            if (j * 32 >= n){
+                break;
             }
+            std::bitset<32> now;
+            for (int k = 0; k < 32; k++){
+                if (k + j * 32 >= n){
+                    break;
+                }
+                char s;
+                std::cin >> s;
+                if (s == '1') {
+                    now[k] = true;
+                }
+            }
+            string.push_back(now);
         }
-        Matrix.push_back(line);
+        Matrix.push_back(string);
     }
     HasWay(Matrix);
     for (int i = 0; i < n; i++){
-        std::string line = Matrix[i].to_string();
-        for (int j = 0; j < n; j++){
-            std::cout << line[j];
+        for (int j = 0; j < n / 32 + 1; j++){
+            for (int k = 0; k < 32; k++) {
+                if (k + j * 32 < n) {
+                    std::cout << Matrix[i][j][k];
+                }
+            }
         }
         std::cout << "\n";
     }
